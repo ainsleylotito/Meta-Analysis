@@ -1,0 +1,83 @@
+---
+title: "Testing Meta Functions"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    toc_float: true
+    code_folding: hide
+date: "2026-08-18"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE) 
+
+#Load packages 
+library(metafor)
+library(foreign)
+library(Hmisc)  
+library(readxl)
+library(tidyverse)
+
+#Importing functions 
+source("Functions.r")
+```
+
+# Read in data 
+
+To start, we will read in our stomach data, which includes the study name (authors and year), location, type of talc, observed counts, expected counts, effect estimate (EE), and the lower and upper bound of the 95% Confidence intervals corresponding with the EE. 
+
+```{r read_data}
+stomach_dat <- read_excel("stomach_dat.xlsx") |> 
+  rename_with(tolower) |> 
+  mutate(study = str_replace_all(study, "\\r\\n|\\r|\\n", " ")) |> #cleaning up output for character strings 
+  filter(!is.na(study))
+head(stomach_dat) 
+
+```
+
+## Log-transformation and standard error calculation 
+
+Next, we need to create two variables. 
+
+We need to log-transform the ee, and derive the standard error from the log-transformed lower and upper bound. We will do so by taking the width of the CI and dividing by (2*1.96). It would be best if we had the n for each and could calculate using a t-distribution, but we didn't have that in our data, so instead we will use the z-value
+
+```{r}
+stomach_dat <- stomach_dat |> 
+  mutate(
+        log_ee = log10(ee),
+         se = ( (log(upper_bound) - log(lower_bound)) / (2 * qnorm(0.975)))
+    )
+
+stomach_dat |> 
+  select(study,ee,log_ee,lower_bound,upper_bound,se) |> 
+  head()
+```  
+
+
+Note that the escalc function is actually quite useful for this in particular, which we don't even have to write anew.
+
+Let's try to get this into a plot before we write the functions and start afresh:  
+
+# Meta-analysis
+
+**Calculating meta**
+```{r}
+stomachmeta <- rma(yi = stomach_dat$log_ee, vi = stomach_dat$se, method = "DL", slab = stomach_dat$study) 
+summary(stomachmeta) #print results
+predict(stomachmeta, transf=exp)
+``` 
+## Cumulative Forest plot 
+```{r}
+x <- cumul(stomachmeta) #Cumulative repeatedly fits specified model adding one study at a time
+forest(x, xlim=c(-4,2.5), alim=c(-2,1), steps=7, slab= stomach_dat$study) 
+``` 
+
+## Funnel Plot 
+```{r}
+funnel(stomachmeta)
+```
+
+
+
