@@ -1,0 +1,90 @@
+---
+title: "Meta Analysis Template"
+author: "Ainsley Lotito"
+date: "2026-08-19"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)  
+
+#List of packages needed for program: 
+required_packages <- c("metafor", "foreign", "Hmisc", "readxl", "tidyverse") 
+
+#Checking if your computer has these installed
+missing_packages <- required_packages[!(required_packages %in% installed.packages()[, "Package"])]
+
+#Installing missing packages (if needed) 
+if (length(missing_packages) > 0) {
+  install.packages(missing_packages, dependencies = TRUE)
+}
+
+
+#Load packages 
+library(metafor)
+library(foreign)
+library(Hmisc)  
+library(readxl)
+library(tidyverse)
+
+#Importing functions 
+source("Functions.r")
+```
+
+# Introduction 
+
+The purpose of this RMarkdown file is to walk you through the process of running the functions created to perform necessary calculations and produce outputs associated with a randomo-effects meta-analysis. 
+
+For the purpose of this template, the code will not run until the correct pathname for the file is specified. 
+
+## Necessary Files
+
+To ensure the code works properly, you must follow the template provided in the excel file `Meta_Analysis_Study_Data_Template.xlsx`. 
+
+**You must not change the variable names, or the code will not run.** 
+
+Please note that if a given study contains empty data for the sample size (Sample_Size), effect size (EE), or either the lower or upper 95% Confidence limits (Lower_CI, Upper_CI), it will not be able to be included in the analysis. 
+
+You are advised to double-check that all data are complete before attempting to run the code. 
+
+It is also important to ensure that your excel sheet pages are organized according to any stratification necessary; for instance, if you are evaluating different types of cancers as your outcome, you should only include relevant studies pertaining to one cancer type on each excel page. 
+
+By default, the function will read in the data pertaining to the first sheet included in an excel workbook.  
+
+## Checks 
+
+**Before running the code, make sure that these rules are followed in the Excel Workbook** 
+
+1. Each sheet name is named according to the stratification convention of studies (ex: Type of Cancer Outcome).
+2. The data in the "Study" column follows the convention of "[Author Name(s)] (Year)".  
+
+# Step 1: Read in data 
+
+To begin, we need to read in the research study data from our excel file. You will need to change the path instructions accordingly to match with the file location on your computer. For more information on file paths and how to use the directory system in R to get the proper file imported, you can consult [this youtube video](https://www.youtube.com/watch?v=Ll5seRpzekY).  
+
+Below is the code used to read in the data. Note that this code will automatically remove rows where the study title is missing, in case of having empty rows of data in the spreadsheet.
+
+It will also produce the "head", which shows you the first few rows of data. 
+
+**Before running the code, ensure that you have replaced `your_file_path.xlsx` with the appropriate excel file.**
+
+```{r}
+study_dat <- read_excel("your_file_path.xlsx") |> 
+  rename_with(tolower) |> 
+  mutate(study = str_replace_all(study, "\\r\\n|\\r|\\n", " ")) |> #cleaning up output for character strings 
+  filter(!is.na(study))
+head(study_dat) 
+```
+
+# Step 2: Calculate log-transformation and standard error 
+
+The following function will log-transform all of the effect sizes and calculate the standard error for each study. 
+
+```{r}
+study_dat <- calc_log_se(study_dat) 
+```

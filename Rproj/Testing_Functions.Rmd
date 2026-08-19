@@ -41,13 +41,13 @@ head(stomach_dat)
 
 Next, we need to create two variables. 
 
-We need to log-transform the ee, and derive the standard error from the log-transformed lower and upper bound. We will do so by taking the width of the CI and dividing by (2*1.96). It would be best if we had the n for each and could calculate using a t-distribution, but we didn't have that in our data, so instead we will use the z-value
+We need to log-transform the ee, and derive the standard error from the log-transformed lower and upper bound. We will do so by taking the width of the CI and dividing by (2*1.96). It would be best if we had the n for each and could calculate using a t-distribution, but we didn't have that in our data, so instead we will use the z-value.
 
 ```{r}
 stomach_dat <- stomach_dat |> 
   mutate(
         log_ee = log10(ee),
-         se = ( (log(upper_bound) - log(lower_bound)) / (2 * qnorm(0.975)))
+         se = ( (log10(upper_bound) - log10(lower_bound)) / (2 * qt(0.975, df = n -1)))
     )
 
 stomach_dat |> 
